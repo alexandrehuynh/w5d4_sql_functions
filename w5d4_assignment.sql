@@ -1,3 +1,5 @@
+--------------------------- PROBLEM 1 -----------------------------------
+
 -- FUNCTION TO CALCULATE LATE FEE
 CREATE OR REPLACE FUNCTION calculate_late_fee(
 days_late INT
@@ -56,10 +58,14 @@ order by rental_id;
 
 
 
+--------------------------- PROBLEM 2 ------------------------------------
+
 
 -- ADD PLATINUM MEMBER COLUMN
 ALTER TABLE customer
 ADD COLUMN platinum_member BOOLEAN DEFAULT FALSE;
+
+
 
 -- PROCEDURE TO UPDATE SINGLE MEMBER STATUS
 CREATE OR REPLACE PROCEDURE update_platinum_member_status(
@@ -69,12 +75,12 @@ LANGUAGE plpgsql AS $$
 DECLARE
     _total_spent DECIMAL;
 BEGIN
-    -- Calculate the total spent amount for the specified customer
+    -- calculate the total spent amount for the specified customer
     SELECT SUM(amount) INTO _total_spent
     FROM payment
     WHERE customer_id = _customer_id;
 
-    -- Update the platinum_member status based on the total spent
+    -- update the platinum_member status based on the total spent
     IF _total_spent > 200 THEN
         UPDATE customer
         SET platinum_member = TRUE
@@ -112,4 +118,24 @@ ORDER BY
     total_amount DESC;
 
 
+-- PROCEDURE TO EVALUATE ALL CUSTOMERS TO PLATINUM
+CREATE OR REPLACE PROCEDURE update_all_platinum_members()
+LANGUAGE plpgsql AS $$
+BEGIN
+    -- set all customers to NOT be Platinum Members
+    UPDATE customer
+    SET platinum_member = FALSE;
 
+    -- update customers to be Platinum Members if they've spent over $200
+    UPDATE customer
+    SET platinum_member = TRUE
+    WHERE customer_id IN (
+        SELECT customer_id
+        FROM payment
+        GROUP BY customer_id
+        HAVING SUM(amount) > 200
+    );
+END;
+$$;
+
+call update_all_platinum_members()
